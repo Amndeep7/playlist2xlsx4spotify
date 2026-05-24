@@ -139,8 +139,8 @@ fn generate_column_widths(data: &Vec<LimitedTrackData>) -> Vec<usize> {
     let (track_name_lengths, album_name_lengths, artist_name_lengths): (Vec<_>, Vec<_>, Vec<_>) =
         data.iter()
             .map(|track| {
-                let artist_names = track.artists.iter().map(|artist| &artist.name).join(";");
-                (track.name.len(), track.album.name.len(), artist_names.len())
+                let artist_names_length = track.artists.iter().map(|artist| artist.name.len()).sum::<usize>() + (track.artists.len() - 1); // artist names are separated by semicolons (see trait impl)
+                (track.name.len(), track.album.name.len(), artist_names_length)
             })
             .multiunzip();
     let mut all_lengths = [track_name_lengths, album_name_lengths, artist_name_lengths];
