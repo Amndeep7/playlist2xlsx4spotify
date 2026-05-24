@@ -44,7 +44,7 @@ async fn get_permitted_playlists(client: &AuthCodePkceSpotify) -> Vec<Simplified
         .collect()
 }
 
-fn select_playlist(playlists: &Vec<SimplifiedPlaylist>) -> &SimplifiedPlaylist {
+fn select_playlist(playlists: &[SimplifiedPlaylist]) -> &SimplifiedPlaylist {
     for (i, playlist) in playlists.iter().enumerate() {
         println!("{i}) {}", playlist.name);
     }
@@ -135,7 +135,7 @@ impl IntoIterator for LimitedTrackData {
 
 // uses the interquartile range algorithm to remove outliers and then returns the number of
 // characters in the remaining longest string
-fn generate_column_widths(data: &Vec<LimitedTrackData>) -> Vec<usize> {
+fn generate_column_widths(data: &[LimitedTrackData]) -> Vec<usize> {
     let (track_name_lengths, album_name_lengths, artist_name_lengths): (Vec<_>, Vec<_>, Vec<_>) =
         data.iter()
             .map(|track| {
@@ -161,8 +161,7 @@ fn generate_column_widths(data: &Vec<LimitedTrackData>) -> Vec<usize> {
             let q3 = lengths[3 * lengths.len() / 4];
             let interquartile_range = q3 - q1;
             lengths.retain(|&length| 2 * length <= 2 * q3 + 3 * interquartile_range); // mult by 2 so that I don't need to deal with floats
-            let width = lengths.iter().copied().max().unwrap().min(30);
-            width
+            lengths.iter().copied().max().unwrap().min(30)
         })
         .collect::<Vec<_>>();
     widths.push(30); // the 'vote' tab also needs a defined width
@@ -203,8 +202,8 @@ async fn main() {
     let client = get_spotify_client().await;
     let playlists = get_permitted_playlists(&client).await;
     let playlist = select_playlist(&playlists);
-    let tracks_data = get_playlist_tracks_data(&client, &playlist).await;
-    let filename = generate_filename(&playlist);
+    let tracks_data = get_playlist_tracks_data(&client, playlist).await;
+    let filename = generate_filename(playlist);
     let mut workbook = generate_xlsx(tracks_data);
     workbook.save(filename).unwrap();
 }
