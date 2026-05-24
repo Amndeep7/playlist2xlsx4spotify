@@ -28,7 +28,6 @@ async fn get_spotify_client() -> AuthCodePkceSpotify {
 // own or are collaborators on
 async fn get_permitted_playlists(client: &AuthCodePkceSpotify) -> Vec<SimplifiedPlaylist> {
     let me = client.current_user().await.unwrap();
-    let me = me.id;
 
     let stream = client.current_user_playlists();
     let playlists = stream
@@ -40,7 +39,7 @@ async fn get_permitted_playlists(client: &AuthCodePkceSpotify) -> Vec<Simplified
 
     playlists
         .into_iter()
-        .filter(|p| p.owner.id == me || p.collaborative)
+        .filter(|p| p.owner.id == me.id || p.collaborative)
         .collect()
 }
 
