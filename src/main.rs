@@ -1,4 +1,4 @@
-use futures_util::StreamExt;
+use futures_util::{StreamExt, TryStreamExt};
 use itertools::Itertools;
 use rspotify::{
     AuthCodePkceSpotify, Credentials, OAuth,
@@ -10,6 +10,7 @@ use rust_xlsxwriter::{Color, Format, Table, TableColumn, TableStyle, Workbook};
 use sanitise_file_name::sanitise;
 use serde::Deserialize;
 use std::ffi::OsString;
+use std::future;
 use std::io;
 use std::path::PathBuf;
 use std::vec;
@@ -28,14 +29,12 @@ async fn get_spotify_client() -> AuthCodePkceSpotify {
 // own or are collaborators on
 async fn get_permitted_playlists(client: &AuthCodePkceSpotify) -> Vec<SimplifiedPlaylist> {
     let me = client.current_user().await.unwrap();
-    let stream = client.current_user_playlists();
-    stream
-        .collect::<Vec<_>>()
+    client
+        .current_user_playlists()
+        .try_filter(|p| future::ready(p.owner.id == me.id || p.collaborative))
+        .try_collect()
         .await
-        .into_iter()
-        .map(|p| p.unwrap())
-        .filter(|p| p.owner.id == me.id || p.collaborative)
-        .collect()
+        .unwrap()
 }
 
 fn select_playlist(playlists: &[SimplifiedPlaylist]) -> &SimplifiedPlaylist {
