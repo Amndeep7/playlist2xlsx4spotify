@@ -68,6 +68,8 @@ struct LimitedTrackData {
     artists: Vec<LimitedArtistData>,
 }
 
+// dunno if it's just not getting paged properly or another restriction spotify implemented was
+// capping out at 50 songs per playlist
 async fn get_playlist_tracks_data(
     client: &AuthCodePkceSpotify,
     playlist: &SimplifiedPlaylist,
