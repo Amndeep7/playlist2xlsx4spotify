@@ -97,7 +97,7 @@ async fn get_playlist_tracks_data(
         )
         .map_ok(|track_data| match track_data.item {
             Some(PlayableItem::Unknown(value)) => {
-                serde_json::from_value::<LimitedTrackData>(value.clone()).unwrap()
+                serde_json::from_value::<LimitedTrackData>(value).unwrap()
             },
             _ => panic!("Spotify returned something unexpected"),
         })
