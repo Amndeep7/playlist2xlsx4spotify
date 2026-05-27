@@ -1,6 +1,6 @@
 use std::{ffi::OsString, future, io, path::PathBuf, vec};
 
-use futures_util::{StreamExt, TryStreamExt};
+use futures_util::TryStreamExt;
 use itertools::Itertools;
 use rspotify::{
     AuthCodePkceSpotify,
@@ -89,27 +89,21 @@ async fn get_playlist_tracks_data(
     playlist: &SimplifiedPlaylist,
 ) -> Vec<LimitedTrackData> {
     // href,limit,offset,total,items.is_local seem to be required by rspotify probably for iteration purposes since it worked just fine without them on the spotify api site
-    let stream = client.playlist_items(
-        playlist.id.clone(),
-        Some("href,limit,offset,total,items(is_local,item(name,album(name),artists(name)))"),
-        None,
-    );
-    let raw_data = stream
-        .collect::<Vec<_>>()
-        .await
-        .into_iter()
-        .collect::<Result<Vec<_>, _>>()
-        .unwrap();
-    let data: Vec<LimitedTrackData> = raw_data
-        .into_iter()
-        .map(|track_data| match track_data.item.unwrap() {
-            PlayableItem::Unknown(value) => {
+    client
+        .playlist_items(
+            playlist.id.clone(),
+            Some("href,limit,offset,total,items(is_local,item(name,album(name),artists(name)))"),
+            None,
+        )
+        .map_ok(|track_data| match track_data.item {
+            Some(PlayableItem::Unknown(value)) => {
                 serde_json::from_value::<LimitedTrackData>(value.clone()).unwrap()
             },
             _ => panic!("Spotify returned something unexpected"),
         })
-        .collect();
-    data
+        .try_collect::<Vec<_>>()
+        .await
+        .unwrap()
 }
 
 fn generate_filename(playlist: &SimplifiedPlaylist) -> OsString {
