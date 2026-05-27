@@ -58,9 +58,7 @@ async fn get_spotify_client() -> AuthCodePkceSpotify {
     spotify
 }
 
-// spotify has restricted the APIs considerably to prevent AI companies from scraping all their
-// data, now, while we can list all playlists, we can only read the tracklist for playlists that we
-// own or are collaborators on
+// spotify has restricted the APIs considerably to prevent AI companies from scraping all their data, now, while we can list all playlists, we can only read the tracklist for playlists that we own or are collaborators on
 async fn get_permitted_playlists(client: &AuthCodePkceSpotify) -> Vec<SimplifiedPlaylist> {
     let me = client.current_user().await.unwrap();
     client
@@ -85,14 +83,12 @@ fn select_playlist(playlists: &[SimplifiedPlaylist]) -> &SimplifiedPlaylist {
     &playlists[selection]
 }
 
-// dunno if it's just not getting paged properly or another restriction spotify implemented was
-// capping out at 50 songs per playlist
+// dunno if it's just not getting paged properly or another restriction spotify implemented was capping out at 50 songs per playlist
 async fn get_playlist_tracks_data(
     client: &AuthCodePkceSpotify,
     playlist: &SimplifiedPlaylist,
 ) -> Vec<LimitedTrackData> {
-    // href,limit,offset,total,items.is_local seem to be required by rspotify probably for iteration
-    // purposes since it worked just fine without them on the spotify api site
+    // href,limit,offset,total,items.is_local seem to be required by rspotify probably for iteration purposes since it worked just fine without them on the spotify api site
     let stream = client.playlist_items(
         playlist.id.clone(),
         Some("href,limit,offset,total,items(is_local,item(name,album(name),artists(name)))"),
@@ -127,8 +123,7 @@ fn generate_filename(playlist: &SimplifiedPlaylist) -> OsString {
     basename
 }
 
-// uses the interquartile range algorithm to remove outliers and then returns the number of
-// characters in the remaining longest string
+// uses the interquartile range algorithm to remove outliers and then returns the number of characters in the remaining longest string
 fn generate_column_widths(data: &[LimitedTrackData]) -> Vec<usize> {
     let (track_name_lengths, album_name_lengths, artist_name_lengths): (Vec<_>, Vec<_>, Vec<_>) =
         data.iter()
