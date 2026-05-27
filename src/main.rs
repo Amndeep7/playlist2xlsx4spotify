@@ -147,7 +147,8 @@ fn generate_column_widths(data: &[LimitedTrackData]) -> Vec<usize> {
     widths
 }
 
-fn generate_xlsx(data: Vec<LimitedTrackData>) -> Workbook {
+fn generate_xlsx(data: impl Into<Vec<LimitedTrackData>>) -> Workbook {
+    let data = data.into();
     let mut workbook = Workbook::new();
     let format = Format::new()
         .set_background_color(Color::Black)
