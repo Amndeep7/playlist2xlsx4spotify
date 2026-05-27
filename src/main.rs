@@ -1,7 +1,11 @@
+use std::{ffi::OsString, future, io, path::PathBuf, vec};
+
 use futures_util::{StreamExt, TryStreamExt};
 use itertools::Itertools;
 use rspotify::{
-    AuthCodePkceSpotify, Credentials, OAuth,
+    AuthCodePkceSpotify,
+    Credentials,
+    OAuth,
     clients::{BaseClient, OAuthClient},
     model::{PlayableItem, playlist::SimplifiedPlaylist},
     scopes,
@@ -9,11 +13,6 @@ use rspotify::{
 use rust_xlsxwriter::{Color, Format, Table, TableColumn, TableStyle, Workbook};
 use sanitise_file_name::sanitise;
 use serde::Deserialize;
-use std::ffi::OsString;
-use std::future;
-use std::io;
-use std::path::PathBuf;
-use std::vec;
 
 async fn get_spotify_client() -> AuthCodePkceSpotify {
     let creds = Credentials::from_env().unwrap();
@@ -92,7 +91,7 @@ async fn get_playlist_tracks_data(
         .map(|track_data| match track_data.item.unwrap() {
             PlayableItem::Unknown(value) => {
                 serde_json::from_value::<LimitedTrackData>(value.clone()).unwrap()
-            }
+            },
             _ => panic!("Spotify returned something unexpected"),
         })
         .collect();
