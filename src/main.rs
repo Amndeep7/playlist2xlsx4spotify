@@ -39,11 +39,7 @@ impl IntoIterator for LimitedTrackData {
         vec![
             self.name,
             self.album.name,
-            self.artists
-                .into_iter()
-                .map(|artist| artist.name)
-                .collect::<Vec<_>>()
-                .join(";"),
+            self.artists.into_iter().map(|artist| artist.name).join(";"),
         ]
         .into_iter()
     }
