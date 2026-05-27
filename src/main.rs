@@ -14,6 +14,41 @@ use rust_xlsxwriter::{Color, Format, Table, TableColumn, TableStyle, Workbook};
 use sanitise_file_name::sanitise;
 use serde::Deserialize;
 
+#[derive(Debug, Deserialize)]
+struct LimitedAlbumData {
+    name: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct LimitedArtistData {
+    name: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct LimitedTrackData {
+    name: String,
+    album: LimitedAlbumData,
+    artists: Vec<LimitedArtistData>,
+}
+
+impl IntoIterator for LimitedTrackData {
+    type IntoIter = vec::IntoIter<Self::Item>;
+    type Item = String;
+
+    fn into_iter(self) -> Self::IntoIter {
+        vec![
+            self.name,
+            self.album.name,
+            self.artists
+                .into_iter()
+                .map(|artist| artist.name)
+                .collect::<Vec<_>>()
+                .join(";"),
+        ]
+        .into_iter()
+    }
+}
+
 async fn get_spotify_client() -> AuthCodePkceSpotify {
     let creds = Credentials::from_env().unwrap();
     let oauth = OAuth::from_env(scopes!("playlist-read-private")).unwrap();
@@ -48,23 +83,6 @@ fn select_playlist(playlists: &[SimplifiedPlaylist]) -> &SimplifiedPlaylist {
     let selection: usize = selection.trim().parse().unwrap();
     println!("You chose \"{}\"", playlists[selection].name);
     &playlists[selection]
-}
-
-#[derive(Debug, Deserialize)]
-struct LimitedAlbumData {
-    name: String,
-}
-
-#[derive(Debug, Deserialize)]
-struct LimitedArtistData {
-    name: String,
-}
-
-#[derive(Debug, Deserialize)]
-struct LimitedTrackData {
-    name: String,
-    album: LimitedAlbumData,
-    artists: Vec<LimitedArtistData>,
 }
 
 // dunno if it's just not getting paged properly or another restriction spotify implemented was
@@ -107,24 +125,6 @@ fn generate_filename(playlist: &SimplifiedPlaylist) -> OsString {
         basename, playlist.name
     );
     basename
-}
-
-impl IntoIterator for LimitedTrackData {
-    type Item = String;
-    type IntoIter = vec::IntoIter<Self::Item>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        vec![
-            self.name,
-            self.album.name,
-            self.artists
-                .into_iter()
-                .map(|artist| artist.name)
-                .collect::<Vec<_>>()
-                .join(";"),
-        ]
-        .into_iter()
-    }
 }
 
 // uses the interquartile range algorithm to remove outliers and then returns the number of
