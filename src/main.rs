@@ -140,7 +140,12 @@ fn generate_column_widths(data: &[LimitedTrackData]) -> Vec<usize> {
             let q3 = lengths[3 * lengths.len() / 4];
             let interquartile_range = q3 - q1;
             lengths.retain(|&length| 2 * length <= 2 * q3 + 3 * interquartile_range); // mult by 2 so that I don't need to deal with floats
-            lengths.iter().copied().max().unwrap().min(30)
+            let max_width = 30;
+            lengths
+                .iter()
+                .max()
+                .map_or(max_width, |&x| x)
+                .min(max_width)
         })
         .collect::<Vec<_>>();
     widths.push(30); // the 'vote' tab also needs a defined width
