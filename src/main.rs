@@ -140,9 +140,9 @@ fn generate_column_widths(data: &[LimitedTrackData]) -> Vec<usize> {
             let q1 = lengths[lengths.len() / 4];
             let q3 = lengths[3 * lengths.len() / 4];
             let interquartile_range = q3 - q1;
-            lengths.retain(|&length| 2 * length <= 2 * q3 + 3 * interquartile_range); // mult by 2 so that I don't need to deal with floats
             lengths
                 .iter()
+                .filter(|&length| 2 * length <= 2 * q3 + 3 * interquartile_range) // mult by 2 so that I don't need to deal with floats
                 .max()
                 .map_or(max_width, |&x| x)
                 .min(max_width)
