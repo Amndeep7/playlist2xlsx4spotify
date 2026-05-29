@@ -161,9 +161,9 @@ fn generate_xlsx(data: impl Into<Vec<LimitedTrackData>>) -> Workbook {
         .set_font_name("Aptos Narrow")
         .set_font_size(11);
     workbook.set_default_format(&format, 20, 64).unwrap();
-    let columns = vec!["Track Name", "Album Name", "Artist Name(s)", "Vote"]
-        .into_iter()
-        .map(|header| TableColumn::new().set_header(header))
+    let columns = ["Track Name", "Album Name", "Artist Name(s)", "Vote"]
+        .iter()
+        .map(|&header| TableColumn::new().set_header(header))
         .collect::<Vec<_>>();
     let table = Table::new()
         .set_columns(&columns)
