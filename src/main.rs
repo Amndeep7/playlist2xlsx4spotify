@@ -132,6 +132,7 @@ fn generate_column_widths(data: &[LimitedTrackData]) -> Vec<usize> {
             })
             .multiunzip();
     let mut all_lengths = [track_name_lengths, album_name_lengths, artist_name_lengths];
+    let max_width = 30;
     let mut widths = all_lengths
         .iter_mut()
         .map(|lengths| {
@@ -140,7 +141,6 @@ fn generate_column_widths(data: &[LimitedTrackData]) -> Vec<usize> {
             let q3 = lengths[3 * lengths.len() / 4];
             let interquartile_range = q3 - q1;
             lengths.retain(|&length| 2 * length <= 2 * q3 + 3 * interquartile_range); // mult by 2 so that I don't need to deal with floats
-            let max_width = 30;
             lengths
                 .iter()
                 .max()
@@ -148,7 +148,7 @@ fn generate_column_widths(data: &[LimitedTrackData]) -> Vec<usize> {
                 .min(max_width)
         })
         .collect::<Vec<_>>();
-    widths.push(30); // the 'vote' tab also needs a defined width
+    widths.push(max_width); // the 'vote' tab also needs a defined width
     widths
 }
 
