@@ -1,4 +1,4 @@
-use std::{ffi::OsString, future, io, path::PathBuf, vec};
+use std::{error::Error, ffi::OsString, future, io, num::TryFromIntError, path::PathBuf, vec};
 
 use futures_util::TryStreamExt;
 use itertools::Itertools;
@@ -183,12 +183,13 @@ fn generate_xlsx(data: impl Into<Vec<LimitedTrackData>>) -> Workbook {
 }
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), Box<dyn Error>>{
     let client = get_spotify_client().await;
     let playlists = get_permitted_playlists(&client).await;
     let playlist = select_playlist(&playlists);
     let tracks_data = get_playlist_tracks_data(&client, playlist).await;
     let filename = generate_filename(playlist);
     let mut workbook = generate_xlsx(tracks_data);
-    workbook.save(filename).unwrap();
+    workbook.save(filename)?;
+    Ok(())
 }
