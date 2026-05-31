@@ -152,7 +152,7 @@ fn generate_column_widths(data: &[LimitedTrackData]) -> Vec<usize> {
     widths
 }
 
-fn generate_xlsx(data: impl Into<Vec<LimitedTrackData>>) -> Workbook {
+fn generate_xlsx(data: impl Into<Vec<LimitedTrackData>>) -> Result<Workbook, Box<dyn Error>> {
     let data = data.into();
     let mut workbook = Workbook::new();
     let format = Format::new()
@@ -160,7 +160,7 @@ fn generate_xlsx(data: impl Into<Vec<LimitedTrackData>>) -> Workbook {
         .set_font_color(Color::White)
         .set_font_name("Aptos Narrow")
         .set_font_size(11);
-    workbook.set_default_format(&format, 20, 64).unwrap();
+    workbook.set_default_format(&format, 20, 64)?;
     let columns = ["Track Name", "Album Name", "Artist Name(s)", "Vote"]
         .iter()
         .map(|&header| TableColumn::new().set_header(header))
@@ -169,17 +169,12 @@ fn generate_xlsx(data: impl Into<Vec<LimitedTrackData>>) -> Workbook {
         .set_columns(&columns)
         .set_style(TableStyle::Dark1);
     let worksheet = workbook.add_worksheet();
-    worksheet
-        .add_table(0, 0, data.len().try_into().unwrap(), 3, &table)
-        .unwrap();
-    generate_column_widths(&data)
-        .iter()
-        .enumerate()
-        .for_each(|(i, &width)| {
-            worksheet.set_column_width(i as u16, width as f64).unwrap();
-        });
-    worksheet.write_row_matrix(1, 0, data).unwrap();
-    workbook
+    worksheet.add_table(0, 0, data.len().try_into()?, 3, &table)?;
+    for (i, &width) in generate_column_widths(&data).iter().enumerate() {
+        worksheet.set_column_width(i.try_into()?, f64::from(width))?;
+    }
+    worksheet.write_row_matrix(1, 0, data)?;
+    Ok(workbook)
 }
 
 #[tokio::main]
@@ -189,7 +184,7 @@ async fn main() -> Result<(), Box<dyn Error>>{
     let playlist = select_playlist(&playlists);
     let tracks_data = get_playlist_tracks_data(&client, playlist).await;
     let filename = generate_filename(playlist);
-    let mut workbook = generate_xlsx(tracks_data);
+    let mut workbook = generate_xlsx(tracks_data)?;
     workbook.save(filename)?;
     Ok(())
 }
