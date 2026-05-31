@@ -102,21 +102,21 @@ async fn get_playlist_tracks_data(
         .unwrap()
 }
 
-fn generate_filename(playlist: &SimplifiedPlaylist) -> OsString {
+fn generate_filename(playlist: &SimplifiedPlaylist) -> Result<OsString, io::Error> {
     let suffix = "xlsx";
     let sanitized = sanitise(&format!("{}.{}", playlist.name, suffix));
-    let sanitized = if sanitized == ".xlsx" {
+    let sanitized = if sanitized == ".xlsx" { // excel on windows doesn't open dotfiles for some reason
         format!("_.{}", suffix)
     } else {
         sanitized
     };
     let path = PathBuf::from(sanitized);
-    let basename = path.as_path().file_name().unwrap().to_os_string();
+    let basename = path.as_path().file_name().ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "generated filename somehow has no filename"))?.to_os_string();
     println!(
         "Using filename {:?} for playlist \"{}\"",
         basename, playlist.name
     );
-    basename
+    Ok(basename)
 }
 
 // uses the interquartile range algorithm to remove outliers and then returns the number of characters in the remaining longest string
@@ -191,7 +191,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let playlists = get_permitted_playlists(&client).await;
     let playlist = select_playlist(&playlists);
     let tracks_data = get_playlist_tracks_data(&client, playlist).await;
-    let filename = generate_filename(playlist);
+    let filename = generate_filename(playlist)?;
     let mut workbook = generate_xlsx(tracks_data)?;
     workbook.save(filename)?;
     Ok(())
