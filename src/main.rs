@@ -103,7 +103,13 @@ async fn get_playlist_tracks_data(
 }
 
 fn generate_filename(playlist: &SimplifiedPlaylist) -> OsString {
-    let sanitized = sanitise(&(playlist.name.clone() + ".xlsx"));
+    let suffix = "xlsx";
+    let sanitized = sanitise(&format!("{}.{}", playlist.name, suffix));
+    let sanitized = if sanitized == ".xlsx" {
+        format!("_.{}", suffix)
+    } else {
+        sanitized
+    };
     let path = PathBuf::from(sanitized);
     let basename = path.as_path().file_name().unwrap().to_os_string();
     println!(
@@ -180,7 +186,7 @@ fn generate_xlsx(data: impl Into<Vec<LimitedTrackData>>) -> Result<Workbook, Box
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>>{
+async fn main() -> Result<(), Box<dyn Error>> {
     let client = get_spotify_client().await;
     let playlists = get_permitted_playlists(&client).await;
     let playlist = select_playlist(&playlists);
