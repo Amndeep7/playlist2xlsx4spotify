@@ -114,7 +114,7 @@ fn generate_filename(playlist: &SimplifiedPlaylist) -> OsString {
 }
 
 // uses the interquartile range algorithm to remove outliers and then returns the number of characters in the remaining longest string
-fn generate_column_widths(data: &[LimitedTrackData]) -> Vec<usize> {
+fn generate_column_widths(data: &[LimitedTrackData]) -> Result<Vec<u8>, TryFromIntError> {
     let (track_name_lengths, album_name_lengths, artist_name_lengths): (Vec<_>, Vec<_>, Vec<_>) =
         data.iter()
             .map(|track| {
@@ -135,21 +135,23 @@ fn generate_column_widths(data: &[LimitedTrackData]) -> Vec<usize> {
     let max_width = 30;
     let mut widths = all_lengths
         .iter_mut()
-        .map(|lengths| {
+        .map(|lengths| -> Result<u8, TryFromIntError> {
             lengths.sort();
             let q1 = lengths[lengths.len() / 4];
             let q3 = lengths[3 * lengths.len() / 4];
             let interquartile_range = q3 - q1;
-            lengths
+            let width = lengths
                 .iter()
                 .filter(|&length| 2 * length <= 2 * q3 + 3 * interquartile_range) // mult by 2 so that I don't need to deal with floats
                 .max()
                 .map_or(max_width, |&x| x)
                 .min(max_width)
+                .try_into()?; // guaranteed to work so long as max_width remains under the max size of a u8
+            Ok(width)
         })
-        .collect::<Vec<_>>();
-    widths.push(max_width); // the 'vote' tab also needs a defined width
-    widths
+        .collect::<Result<Vec<_>, TryFromIntError>>()?;
+    widths.push(max_width.try_into()?); // the 'vote' tab also needs a defined width
+    Ok(widths)
 }
 
 fn generate_xlsx(data: impl Into<Vec<LimitedTrackData>>) -> Result<Workbook, Box<dyn Error>> {
@@ -170,7 +172,7 @@ fn generate_xlsx(data: impl Into<Vec<LimitedTrackData>>) -> Result<Workbook, Box
         .set_style(TableStyle::Dark1);
     let worksheet = workbook.add_worksheet();
     worksheet.add_table(0, 0, data.len().try_into()?, 3, &table)?;
-    for (i, &width) in generate_column_widths(&data).iter().enumerate() {
+    for (i, &width) in generate_column_widths(&data)?.iter().enumerate() {
         worksheet.set_column_width(i.try_into()?, f64::from(width))?;
     }
     worksheet.write_row_matrix(1, 0, data)?;
