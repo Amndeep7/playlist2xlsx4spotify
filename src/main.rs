@@ -13,6 +13,7 @@ use futures_util::TryStreamExt;
 use itertools::Itertools;
 use rspotify::{
     AuthCodePkceSpotify,
+    ClientError,
     Credentials,
     OAuth,
     clients::{BaseClient, OAuthClient},
@@ -92,7 +93,7 @@ fn select_playlist(playlists: &[SimplifiedPlaylist]) -> &SimplifiedPlaylist {
 async fn get_playlist_tracks_data(
     client: &AuthCodePkceSpotify,
     playlist: &SimplifiedPlaylist,
-) -> Vec<LimitedTrackData> {
+) -> Result<Vec<LimitedTrackData>, ClientError> {
     // href,limit,offset,total,items.is_local seem to be required by rspotify probably for iteration purposes since it worked just fine without them on the spotify api site
     client
         .playlist_items(
@@ -108,7 +109,6 @@ async fn get_playlist_tracks_data(
         })
         .try_collect::<Vec<_>>()
         .await
-        .unwrap()
 }
 
 // uses the interquartile range algorithm to remove outliers and then returns the number of characters in the remaining longest string
@@ -213,7 +213,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let client = get_spotify_client().await;
     let playlists = get_permitted_playlists(&client).await;
     let playlist = select_playlist(&playlists);
-    let tracks_data = get_playlist_tracks_data(&client, playlist).await;
+    let tracks_data = get_playlist_tracks_data(&client, playlist).await?;
     let mut workbook = generate_xlsx(tracks_data)?;
     let filename = generate_filename(playlist)?;
     let handle = get_file_handle(&filename)?;
