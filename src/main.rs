@@ -111,23 +111,6 @@ async fn get_playlist_tracks_data(
         .unwrap()
 }
 
-fn generate_filename(playlist: &SimplifiedPlaylist) -> Result<OsString, io::Error> {
-    let suffix = "xlsx";
-    let sanitized = sanitise(&format!("{}.{}", playlist.name, suffix));
-    let sanitized = if sanitized == ".xlsx" { // excel on windows doesn't open dotfiles for some reason
-        format!("_.{}", suffix)
-    } else {
-        sanitized
-    };
-    let path = PathBuf::from(sanitized);
-    let basename = path.as_path().file_name().ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "generated filename somehow has no filename"))?.to_os_string();
-    println!(
-        "Using filename {:?} for playlist \"{}\"",
-        basename, playlist.name
-    );
-    Ok(basename)
-}
-
 // uses the interquartile range algorithm to remove outliers and then returns the number of characters in the remaining longest string
 fn generate_column_widths(data: &[LimitedTrackData]) -> Result<Vec<u8>, TryFromIntError> {
     let (track_name_lengths, album_name_lengths, artist_name_lengths): (Vec<_>, Vec<_>, Vec<_>) =
@@ -192,6 +175,33 @@ fn generate_xlsx(data: impl Into<Vec<LimitedTrackData>>) -> Result<Workbook, Box
     }
     worksheet.write_row_matrix(1, 0, data)?;
     Ok(workbook)
+}
+
+fn generate_filename(playlist: &SimplifiedPlaylist) -> Result<OsString, io::Error> {
+    let suffix = "xlsx";
+    let sanitized = sanitise(&format!("{}.{}", playlist.name, suffix));
+    let sanitized = if sanitized == ".xlsx" {
+        // excel on windows doesn't open dotfiles for some reason
+        format!("_.{}", suffix)
+    } else {
+        sanitized
+    };
+    let path = PathBuf::from(sanitized);
+    let basename = path
+        .as_path()
+        .file_name()
+        .ok_or_else(|| {
+            io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "generated filename somehow has no filename",
+            )
+        })?
+        .to_os_string();
+    println!(
+        "Using filename {:?} for playlist \"{}\"",
+        basename, playlist.name
+    );
+    Ok(basename)
 }
 
 fn get_file_handle(path: impl AsRef<Path>) -> io::Result<File> {
