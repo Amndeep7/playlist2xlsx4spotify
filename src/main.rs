@@ -13,6 +13,7 @@ use futures_util::TryStreamExt;
 use itertools::Itertools;
 use rspotify::{
     AuthCodePkceSpotify,
+    ClientError,
     Credentials,
     OAuth,
     clients::{BaseClient, OAuthClient},
@@ -64,14 +65,15 @@ async fn get_spotify_client() -> AuthCodePkceSpotify {
 }
 
 // spotify has restricted the APIs considerably to prevent AI companies from scraping all their data, now, while we can list all playlists, we can only read the tracklist for playlists that we own or are collaborators on
-async fn get_permitted_playlists(client: &AuthCodePkceSpotify) -> Vec<SimplifiedPlaylist> {
-    let me = client.current_user().await.unwrap();
+async fn get_permitted_playlists(
+    client: &AuthCodePkceSpotify,
+) -> Result<Vec<SimplifiedPlaylist>, ClientError> {
+    let me = client.current_user().await?;
     client
         .current_user_playlists()
         .try_filter(|p| future::ready(p.owner.id == me.id || p.collaborative))
         .try_collect()
         .await
-        .unwrap()
 }
 
 fn select_playlist(
@@ -219,7 +221,7 @@ fn get_file_handle(path: impl AsRef<Path>) -> io::Result<File> {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let client = get_spotify_client().await;
-    let playlists = get_permitted_playlists(&client).await;
+    let playlists = get_permitted_playlists(&client).await?;
     let playlist = select_playlist(&playlists)?;
     let tracks_data = get_playlist_tracks_data(&client, playlist).await?;
     let mut workbook = generate_xlsx(tracks_data)?;
