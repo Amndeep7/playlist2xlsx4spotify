@@ -55,13 +55,23 @@ impl IntoIterator for LimitedTrackData {
     }
 }
 
-async fn get_spotify_client() -> AuthCodePkceSpotify {
-    let creds = Credentials::from_env().unwrap();
-    let oauth = OAuth::from_env(scopes!("playlist-read-private")).unwrap();
+async fn get_spotify_client() -> Result<AuthCodePkceSpotify, Box<dyn Error>> {
+    let creds = Credentials::from_env().ok_or_else(|| {
+        io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "RSPOTIFY_CLIENT_ID and/or RSPOTIFY_CLIENT_SECRET envvar not provided",
+        )
+    })?;
+    let oauth = OAuth::from_env(scopes!("playlist-read-private")).ok_or_else(|| {
+        io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "RSPOTIFY_REDIRECT_URI envvar not provided",
+        )
+    })?;
     let mut spotify = AuthCodePkceSpotify::new(creds, oauth);
-    let url = spotify.get_authorize_url(None).unwrap();
-    spotify.prompt_for_token(&url).await.unwrap();
-    spotify
+    let url = spotify.get_authorize_url(None)?;
+    spotify.prompt_for_token(&url).await?;
+    Ok(spotify)
 }
 
 // spotify has restricted the APIs considerably to prevent AI companies from scraping all their data, now, while we can list all playlists, we can only read the tracklist for playlists that we own or are collaborators on
@@ -220,7 +230,7 @@ fn get_file_handle(path: impl AsRef<Path>) -> io::Result<File> {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let client = get_spotify_client().await;
+    let client = get_spotify_client().await?;
     let playlists = get_permitted_playlists(&client).await?;
     let playlist = select_playlist(&playlists)?;
     let tracks_data = get_playlist_tracks_data(&client, playlist).await?;
