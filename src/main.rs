@@ -74,7 +74,9 @@ async fn get_permitted_playlists(client: &AuthCodePkceSpotify) -> Vec<Simplified
         .unwrap()
 }
 
-fn select_playlist(playlists: &[SimplifiedPlaylist]) -> &SimplifiedPlaylist {
+fn select_playlist(
+    playlists: &[SimplifiedPlaylist],
+) -> Result<&SimplifiedPlaylist, Box<dyn Error>> {
     for (i, playlist) in playlists.iter().enumerate() {
         println!("{i}) {}", playlist.name);
     }
@@ -82,10 +84,10 @@ fn select_playlist(playlists: &[SimplifiedPlaylist]) -> &SimplifiedPlaylist {
         "Which playlist to process (NOTE: it must be owned or collaborated by you so you might need to manually make a copy if it doesn't show up in the list)?  Provide the index:"
     );
     let mut selection = String::new();
-    io::stdin().read_line(&mut selection).unwrap();
-    let selection: usize = selection.trim().parse().unwrap();
+    io::stdin().read_line(&mut selection)?;
+    let selection: usize = selection.trim().parse()?;
     println!("You chose \"{}\"", playlists[selection].name);
-    &playlists[selection]
+    Ok(&playlists[selection])
 }
 
 // dunno if it's just not getting paged properly or another restriction spotify implemented was capping out at 50 songs per playlist
@@ -218,7 +220,7 @@ fn get_file_handle(path: impl AsRef<Path>) -> io::Result<File> {
 async fn main() -> Result<(), Box<dyn Error>> {
     let client = get_spotify_client().await;
     let playlists = get_permitted_playlists(&client).await;
-    let playlist = select_playlist(&playlists);
+    let playlist = select_playlist(&playlists)?;
     let tracks_data = get_playlist_tracks_data(&client, playlist).await?;
     let mut workbook = generate_xlsx(tracks_data)?;
     let filename = generate_filename(playlist)?;
