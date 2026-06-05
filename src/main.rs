@@ -13,7 +13,6 @@ use futures_util::TryStreamExt;
 use itertools::Itertools;
 use rspotify::{
     AuthCodePkceSpotify,
-    ClientError,
     Credentials,
     OAuth,
     clients::{BaseClient, OAuthClient},
@@ -93,7 +92,7 @@ fn select_playlist(playlists: &[SimplifiedPlaylist]) -> &SimplifiedPlaylist {
 async fn get_playlist_tracks_data(
     client: &AuthCodePkceSpotify,
     playlist: &SimplifiedPlaylist,
-) -> Result<Vec<LimitedTrackData>, ClientError> {
+) -> Result<Vec<LimitedTrackData>, Box<dyn Error>> {
     // href,limit,offset,total,items.is_local seem to be required by rspotify probably for iteration purposes since it worked just fine without them on the spotify api site
     client
         .playlist_items(
@@ -101,13 +100,20 @@ async fn get_playlist_tracks_data(
             Some("href,limit,offset,total,items(is_local,item(name,album(name),artists(name)))"),
             None,
         )
-        .map_ok(|track_data| match track_data.item {
-            Some(PlayableItem::Unknown(value)) => {
-                serde_json::from_value::<LimitedTrackData>(value).unwrap()
-            },
-            _ => panic!("Spotify returned something unexpected"),
+        .map_err(Into::into)
+        .and_then(|track_data| async move {
+            match track_data.item {
+                Some(PlayableItem::Unknown(value)) => {
+                    Ok(serde_json::from_value::<LimitedTrackData>(value)?)
+                },
+                _ => Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    "Spotify returned something unexpected",
+                )
+                .into()),
+            }
         })
-        .try_collect::<Vec<_>>()
+        .try_collect()
         .await
 }
 
